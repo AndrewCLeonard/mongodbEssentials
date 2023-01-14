@@ -16,8 +16,7 @@ Defaults
 instructions here
 https://coding-boot-camp.github.io/full-stack/mongodb/how-to-install-mongodb
 
-Left off at:
-"Click OK on any remaining screens, then restart Git Bash completely. You can verify that the installation was correct by going to Git Bash and typing the following:"
+On Windows, if you use the Windows `mongosh` as opposed to the Linux, you _cannot_ use `fork`. 
 
 ## 2. Database Setup
 
@@ -100,3 +99,56 @@ For production environments, it's better to use config files
     -   `rm -rif replica_set_cmdline`
 
 ### Set up a replica set with config files
+
+set up keyfile with:
+` openssl rand -base64 755 > keyfile`
+
+for production environments, use X509 certificate instead
+
+current user only has read permissions:
+`chmod 400 keyfile`
+
+shell parameter expansion:
+`mkdir -p m{1,2,3}/db`
+
+`touch m1.config
+
+#### create config file
+
+normally would be copied from somewhere else
+
+```
+storage:
+    dbPath: m1/db
+net:
+    bindIp: localhost
+    port: 27017
+security:
+    authorization: enabled
+    keyFile: keyfile
+systemLog:
+    destination: file
+    path: m1/mongod.log
+processManagement:
+    fork: true
+replication:
+    replsetName: mongodb-essentials-rs
+```
+
+_this won't work on Windows **unless** you're using the Unix-like options. 
+
+copy `m1.conf` to `m2.conf` and `m3.conf`:
+
+`cp m1.conf m2.conf`
+`cp m1.conf m3.conf`
+
+change path where mongod
+1. storage 
+2. port
+3. systemLog path 
+
+start mongod processes:
+`mongod -f m1.conf`
+`mongod -f m2.conf`
+`mongod -f m3.conf`
+
