@@ -1,5 +1,15 @@
 # Tutorial Notes
 
+## Mongod
+
+What is mongod?
+
+-   core unit of MongoDB
+-   daemon process for MongoDB
+-   Handles data requests from the MongoDB shell or drivers
+-   manages data access
+-   Performs background management operations
+
 ## Start Database
 
 `mongod --dbpath <folder>`
@@ -16,7 +26,7 @@ Defaults
 instructions here
 https://coding-boot-camp.github.io/full-stack/mongodb/how-to-install-mongodb
 
-On Windows, if you use the Windows `mongosh` as opposed to the Linux, you _cannot_ use `fork`. 
+On Windows, if you use the Windows `mongosh` as opposed to the Linux, you _cannot_ use `fork`.
 
 ## 2. Database Setup
 
@@ -115,7 +125,22 @@ shell parameter expansion:
 
 #### create config file
 
-normally would be copied from somewhere else
+normally would be copied from existing config file
+
+keyfile for database to provide minimum authentification for members of replica set. But use something more secure for production
+`openssl rand -base64 755 > keyfile`
+
+add permissions
+`chmod 400 keyfile`
+
+| argument          | explanation                                                                                  |
+| ----------------- | -------------------------------------------------------------------------------------------- |
+| storage           | where the db stores its files                                                                |
+| net               | server settings?                                                                             |
+| security          |                                                                                              |
+| systemLog         | where each mongod stores its logs. Specify destination and path                              |
+| processManagement | N.B. fork only works on UNIX-like systems. Fork starts mongod as it's own individual process |
+| replication       |                                                                                              |
 
 ```
 storage:
@@ -135,7 +160,7 @@ replication:
     replsetName: mongodb-essentials-rs
 ```
 
-_this won't work on Windows **unless** you're using the Unix-like options. 
+\_this won't work on Windows **unless** you're using the Unix-like options.
 
 copy `m1.conf` to `m2.conf` and `m3.conf`:
 
@@ -143,12 +168,199 @@ copy `m1.conf` to `m2.conf` and `m3.conf`:
 `cp m1.conf m3.conf`
 
 change path where mongod
-1. storage 
+
+1. storage
 2. port
-3. systemLog path 
+3. systemLog path
 
 start mongod processes:
 `mongod -f m1.conf`
 `mongod -f m2.conf`
 `mongod -f m3.conf`
 
+connect to instances
+
+1. open `mongosh` because I'm using default parameters here
+2. `use admin` because that's where config is and where we can create users
+3. `config = { _id: "mongodb-essentials-rs", members: [{_id: 0, host: "localhost:27017"}, {_id: 1, host: "localhost:27018"}, {_id: 2, host: "localhost:27019"}] }`
+4. `rs.initiate(config)
+
+Create the first user. After the first user, have to authenticate with privileges to create more users. Therefore, first user needs privileges to create other users.
+\_use `passwordPrompt` so pw isn't visible in the logs
+`db.createUser({user: 'andy', pwd: passwordPrompt(), roles: ["root"]})`
+
+to authenticate, need to authenticate
+`db.getSiblingDB("admin").auth("andy")`
+
+check status of replicaset
+`rs.status()`
+
+Or, get more succinct info:
+`db.serverStatus()['repl']`
+
+You may need to restart replica set:
+go back to folder and run `mongod -f m1.conf`, as well as m2 and m3.
+
+### Import the Sample Data
+
+#### MongoDB Database Tools
+
+| tool         | Explanation                    |
+| ------------ | ------------------------------ |
+| mongostat    | Statistics on a running mongod |
+| mongodubp    | Export dump files to BSON      |
+| mongorestore | Import dump files from BSON    |
+| mongoexport  | Export data to JSON or CSV     |
+| mongoimport  | Import data from JSON or CSV   |
+
+#### import datasets
+
+```
+mongoimport --username="andy" --authenticationDatabase="admin" --db=sample_data inventory.json
+mongoimport --username="andy" --authenticationDatabase="admin" --db=sample_data movies.json
+mongoimport --username="andy" --authenticationDatabase="admin" --db=sample_data orders.json
+```
+
+### Debug Your Deployment
+
+-   database failing to start?
+    -   check log files, e.g. `m1/mongod.log`
+    -   look for errors
+-   Disable the fork option
+    -   change fork to false to show the error that occurs when you start `mongod`
+-   check Oplog
+    -   `db.oplog.rs.find( { "o.msg": { $ne: "periodic noop" } }).sort( {$natural: -1 } ).limit(1).pretty()`
+-   increase the log level
+    -   `db.getLogComponents()`
+    -   `db.adminCommond({ setParameter: 1, LogLevel: 2 })` this would make LogLevel more verbose. Don't keep it on high level, this will slow things down
+-   Go to Stack Overflow and say a prayer
+
+### The Document Model
+
+-   MongoDB natively orks with JSON documents
+-   You can store JSON data as it is
+
+#### JSON and MongoDB
+
+-   MongoDB uses a **binary-encoded serialization of JSON-like documents** called **BSON**
+-   **BSON** is designed to be **lightweight, traversable,** and **efficient**
+-   BSON can **store binary data** such as **images, timestamps,** and **longs**
+
+### Namespaces, collections, and models
+
+#### Data Organization
+
+-   inside one database deployment can be one or more databases.
+-   inside each database is a collection
+
+**Example:**
+`use blog`
+`show collections` will be empty
+
+```
+db.authors.insertOne({"name": "Naomi Pentrel"})
+```
+
+### MongoDB Query Language (MQL)
+
+-   a tool to access data in MongoDB
+-   Also called the MongoDB Query API
+-   MQL allows you to perform CRUD operations
+-   js-based shell
+
+#### Insert Examples
+
+```
+db.authors.insertOne({"name": "Andrew Leonard"})
+```
+
+`insertMany`
+
+```
+db.authors.insertMany([{"name": "Elliot Horowitz"}, {"name": "Dwight Merriman"}, {"name": "Kevin P. Ryan"}])
+```
+
+#### Read Examples
+
+```
+db.authors.findOne()
+```
+
+multiple documents
+
+```
+db.authors.find()
+```
+
+match a condition:
+
+```
+db.authors.find({"name": "Andrew Leonard"})
+```
+
+#### Update Examples
+
+update one:
+
+```
+db.authors.updateOne({"name": "Andrew Leonard"}, { $set: { website: "https://www.andrewcleonard.com"} })
+```
+
+Update many:
+
+```
+db.authors.updateMany({ }, { $set: { books: [] } })
+```
+
+#### Delete Documents
+
+delete 1:
+
+```
+db.authors.deleteOne({ name: "Andrew Leonard"})
+```
+
+delete many:
+_specifying nothing will delete everything!_
+
+```
+db.authors.deleteMany({ })
+```
+
+### Transactions
+
+If there's no index, the db checks _every_ document. This is called a collection scan
+
+-   not efficient
+
+An **index** provides an **organized** way to look up data by storing a **subset of the data with pointers** to the location of the full records
+
+-   if query can be answered with an index, it's called a **covered query**
+-   more efficient queries and updates
+
+Create an index when you frequently...
+
+-   query on the same fields
+-   perfrom range-based queries on fields
+-   query same things repeatedly
+
+Indexes have costs
+
+-   need to be maintained = 10% write overhead
+
+Types of Indexes
+
+-   single field indexes (just one field)
+-   partial indexes (add option to tell db to match certain conditions)
+-   compound indexes (index on combination of fields. Useful if you query 2 or more queries together)
+-   multikey indexes (up to 1 array value)
+-   text indexes (search within text fields)
+-   wildcard indexes (set of fields you don't know the name because it changes dynamically)
+-   Geospatial indexes
+-   hashed indexes (reduce index size)
+
+#### create an index
+
+```
+db.authors.createIndex({ name: 1 })
+```
