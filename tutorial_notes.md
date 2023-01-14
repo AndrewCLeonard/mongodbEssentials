@@ -1,4 +1,4 @@
-# Tutorial Notes
+# Introduction
 
 ## Mongod
 
@@ -28,9 +28,9 @@ https://coding-boot-camp.github.io/full-stack/mongodb/how-to-install-mongodb
 
 On Windows, if you use the Windows `mongosh` as opposed to the Linux, you _cannot_ use `fork`.
 
-## 2. Database Setup
+# 2. Database Setup
 
-### Mongod
+## Mongod
 
 get MongoDB database running locally:
 `mongod --dbpath mongod_only`
@@ -45,13 +45,13 @@ Defaults
 
 Default doesn't work on macOS Catalina or later because it's read only, so specify the directory
 
-### Replica Set
+## Replica Set
 
 -   Data replicated in multiple places. Primary data copied to secondaries.
 -   Should have at least 3 members in a replica set.
     -   Choose an uneven number of voting replica set members so if primary goes down, the others can "vote" to choose a new primary
 
-### Set up replica set from command line
+## Set up replica set from command line
 
 keyfile for database to provide minimum authentification for members of replica set. But use something more secure for production
 `openssl rand -base64 755 > keyfile`
@@ -108,7 +108,7 @@ For production environments, it's better to use config files
     -   if necessary, go up a level to delete all files in that folder
     -   `rm -rif replica_set_cmdline`
 
-### Set up a replica set with config files
+## Set up a replica set with config files
 
 set up keyfile with:
 ` openssl rand -base64 755 > keyfile`
@@ -123,7 +123,7 @@ shell parameter expansion:
 
 `touch m1.config
 
-#### create config file
+### create config file
 
 normally would be copied from existing config file
 
@@ -201,9 +201,9 @@ Or, get more succinct info:
 You may need to restart replica set:
 go back to folder and run `mongod -f m1.conf`, as well as m2 and m3.
 
-### Import the Sample Data
+## Import the Sample Data
 
-#### MongoDB Database Tools
+### MongoDB Database Tools
 
 | tool         | Explanation                    |
 | ------------ | ------------------------------ |
@@ -213,7 +213,7 @@ go back to folder and run `mongod -f m1.conf`, as well as m2 and m3.
 | mongoexport  | Export data to JSON or CSV     |
 | mongoimport  | Import data from JSON or CSV   |
 
-#### import datasets
+### import datasets
 
 ```
 mongoimport --username="andy" --authenticationDatabase="admin" --db=sample_data inventory.json
@@ -221,7 +221,7 @@ mongoimport --username="andy" --authenticationDatabase="admin" --db=sample_data 
 mongoimport --username="andy" --authenticationDatabase="admin" --db=sample_data orders.json
 ```
 
-### Debug Your Deployment
+## Debug Your Deployment
 
 -   database failing to start?
     -   check log files, e.g. `m1/mongod.log`
@@ -235,7 +235,9 @@ mongoimport --username="andy" --authenticationDatabase="admin" --db=sample_data 
     -   `db.adminCommond({ setParameter: 1, LogLevel: 2 })` this would make LogLevel more verbose. Don't keep it on high level, this will slow things down
 -   Go to Stack Overflow and say a prayer
 
-### The Document Model
+# 3. Working with MongoDB
+
+## The Document Model
 
 -   MongoDB natively orks with JSON documents
 -   You can store JSON data as it is
@@ -246,22 +248,27 @@ mongoimport --username="andy" --authenticationDatabase="admin" --db=sample_data 
 -   **BSON** is designed to be **lightweight, traversable,** and **efficient**
 -   BSON can **store binary data** such as **images, timestamps,** and **longs**
 
-### Namespaces, collections, and models
+## Namespaces, collections, and models
+
+Data is organized into databases. A MongoDB deployment can contain multiple databases. Each database contains one or more collections. Each collection contains documents.
 
 #### Data Organization
 
--   inside one database deployment can be one or more databases.
+-   inside one database **deployment** can be one or more databases.
 -   inside each database is a collection
+    -   collection = grouping of MongoDB documents
+    -   documents = individual records
 
 **Example:**
 `use blog`
 `show collections` will be empty
+(could also use `show tables`)
 
 ```
 db.authors.insertOne({"name": "Naomi Pentrel"})
 ```
 
-### MongoDB Query Language (MQL)
+## MongoDB Query Language (MQL)
 
 -   a tool to access data in MongoDB
 -   Also called the MongoDB Query API
@@ -270,11 +277,14 @@ db.authors.insertOne({"name": "Naomi Pentrel"})
 
 #### Insert Examples
 
+field keys must have quotes around them. You don't need them in MongoDB shell, but you do in most other places.
+
 ```
 db.authors.insertOne({"name": "Andrew Leonard"})
 ```
 
 `insertMany`
+_notice that it's an array_
 
 ```
 db.authors.insertMany([{"name": "Elliot Horowitz"}, {"name": "Dwight Merriman"}, {"name": "Kevin P. Ryan"}])
@@ -327,7 +337,7 @@ _specifying nothing will delete everything!_
 db.authors.deleteMany({ })
 ```
 
-### Transactions
+## Transactions
 
 If there's no index, the db checks _every_ document. This is called a collection scan
 
@@ -359,8 +369,53 @@ Types of Indexes
 -   Geospatial indexes
 -   hashed indexes (reduce index size)
 
-#### create an index
+### create an index
 
 ```
 db.authors.createIndex({ name: 1 })
+```
+
+# 4. CRUD Operations
+
+-   you can `insertOne` or `insertMany`
+
+## **durability**
+
+durability = a property that guarantees that acknowledged writes are _permanently stored_ in the db, even if the db or parts thereof become temporarily unavailable
+
+durability is configurable by specifying a **writeConcern**
+
+-   high durability - slower writes
+-   low durability - faster writes
+
+### Configuring Durability
+
+wtimeout = time limit to prevent write operations from blocking indefinitely
+j = whether we want guarantee that write be persistent to disk. Safer, but takes longer. If false, e.g. if server loses power, there's a moment of vulnerability
+w = specifies number of mongod instances that need to acknowledge a write before the db tells it has been completed. Default is majority. 
+```
+db.authors.insertOne(
+    { "name": "Naomi" },
+    {
+        w: "majority",
+        j: "true",
+        wtimeout: 100
+    }
+)
+```
+
+#### Which writeConcert?
+cannot happen? w: "majority"
+inconvenience? w: 1
+
+## findOne and find
+
+
+# My Troubleshooting Notes
+
+Never use kill -9 (i.e. SIGKILL) to terminate a mongod instance.
+https://www.mongodb.com/docs/manual/tutorial/manage-mongodb-processes/#start-mongod-processes
+
+```
+
 ```
