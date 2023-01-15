@@ -459,9 +459,8 @@ db.authors.createIndex({ name: 1 })
 ### nested query
 
 `db.movies.findOne({"ratings.mndb": 10})`
-this will find the first item where "Musical" is listed as the first (zero-indexed) genre 
+this will find the first item where "Musical" is listed as the first (zero-indexed) genre
 `db.movies.findOne({"genres.0": "Musical"})`
-
 
 ### **durability**
 
@@ -499,37 +498,86 @@ inconvenience? w: 1
 ## findOne and find
 
 ### Consistency and Availability
-- allows you to see only data that is majority committed
-- configurable in MongoDB by specifying a `readConcern`
-    - local (default)
-    - available
-    - majority
-    - linearizable (slower)
+
+-   allows you to see only data that is majority committed
+-   configurable in MongoDB by specifying a `readConcern`
+    -   local (default)
+    -   available
+    -   majority
+    -   linearizable (slower)
 
 ### Configuring the `readPreference`
-- Allows the application to route reads to secondaries
-- risk of reading stale data
-- fine for analytics
-- don't use to increase capacity for general traffic
+
+-   Allows the application to route reads to secondaries
+-   risk of reading stale data
+-   fine for analytics
+-   don't use to increase capacity for general traffic
 
 options:
-- primary (default)
-- primaryPreferred
-- secondary 
-- secondaryPreferred
-- nearest (lowest latency)
+
+-   primary (default)
+-   primaryPreferred
+-   secondary
+-   secondaryPreferred
+-   nearest (lowest latency)
 
 `use sample_data`
 
+## Comparison Operators
 
+-   $eq (=)
+-   $gt (>)
+-   $gte (≥)
+-   $lt (<)
+-   $lte (≤)
+-   $ne (≠)
+-   $in () same as "OR" operator?
+-   $nin ( ) same as "neither"
 
+E.g.:
 
+```
+db.inventory.findOne({ "variations.quantity": { $gte: 8 } })
+```
 
+`$in` example
 
+```
+db.inventory.findOne({ "variations.variation": { $in: [ "Blue", "Red"] } })
+```
 
+## Logical Operators
 
+-   $and (^)
+-   $or (v)
+-   $nor (^)
+-   $not (^)
 
+_when setting up the searches, the author creates the brackets first, then adds search terms, e.g.:_
 
+```
+db.inventory.findOne({ $nor: [{}, {}] })
+```
+
+```
+db.inventory.findOne({ $and: [{"variations.quantity": {$ne: 0} }, {"variations.quantity": { $exists: true}}] })
+db.inventory.findOne({ $or: [{"variations.variation": "Blue" }, {"variations.variation": "Green" }, {"variations.variation": "Teal" }] })
+db.inventory.findOne({ $nor: [{price: {$gt: 8000}}, {"variations.variation": "Blue"}] })
+```
+
+`$not` does not get an array passed to it:
+
+```
+db.inventory.findOne({ "price": {$not: { $gt: 2000} } })
+```
+_if you search a field that doesn't exist, it'll still work! Watch out!
+```
+db.inventory.findOne({ "variations.price": {$not: { $gt: 2000} } })
+```
+
+---
+
+---
 
 ---
 
@@ -541,11 +589,13 @@ https://www.mongodb.com/docs/manual/tutorial/manage-mongodb-processes/#start-mon
 ## child process failed, exited with 48
 
 ```
+
 ➜ ~/codingBootcamp/mongodbEssentials/replicaset git:(main) ✗ mongod -f m1.conf
 about to fork child process, waiting until server is ready for connections.
 forked process: 7224
 ERROR: child process failed, exited with 48
 To see additional information in this output, start without the "--fork" option.
+
 ```
 
 how to kill processes using terminal in Mac OS x
@@ -556,7 +606,9 @@ https://www.chriswrites.com/how-to-view-and-kill-processes-using-the-terminal-in
 to stop mongodb, I have to use homebrew https://www.mongodb.com/community/forums/t/mongodb-5-0-fails-to-run-in-mac-os-with-homebrew-error-25600-asio-socket-failing/164658/2
 
 ```
+
 brew services stop mongodb-community
+
 ```
 
 kill processes as needed https://www.mongodb.com/community/forums/t/i-have-the-issue-with-error-setting-up-listener-attr-error-code-9001-codename-socketexception-errmsg-permission-denied/179119/4
@@ -585,9 +637,11 @@ Maybe I wasn't shutting down properly, so it was showing as "already in use?"
 https://www.mongodb.com/community/forums/t/help-brew-mongodb-community-5-0-error-macos/125648/4
 
 ```
+
 ls -l /tmp/mongodb-27017.sock
 sudo rm -rf /tmp/mongodb-27017.sock
 brew services start mongodb-community
+
 ```
 
 Now I get error 12288
@@ -604,21 +658,27 @@ I think I was getting an error when uninstalling/reinstalling because I didn't r
 _I needed to do camel case for_ `replSetName`
 
 ```
+
 Unrecognized option: replication.replsetName
 try 'mongod --help' for more information
+
 ```
 
 ## unable to start replica set
 
 ```
+
 admin> rs.initiate(config)
 MongoServerError: This node was not started with replication enabled.
+
 ```
 
 I had to add `--replSet`, it needs to match whatever is setup in the config files or it won't work
 
 ```
+
 mongod -f m3.conf --replSet=mongodb-essentials-rs
+
 ```
 
 ## unable to import records
@@ -626,11 +686,17 @@ mongod -f m3.conf --replSet=mongodb-essentials-rs
 _At first, I mistyped my `username` as "andy" instead of "Andy"_
 
 ```
-➜  ~/codingBootcamp/mongodbEssentials/datasets git:(fresh_start) ✗ mongoimport --username="andy" --authenticationDatabase="admin" --db=sample_data inventory.json
+
+➜ ~/codingBootcamp/mongodbEssentials/datasets git:(fresh_start) ✗ mongoimport --username="andy" --authenticationDatabase="admin" --db=sample_data inventory.json
 
 Enter password for mongo user:
 
-2023-01-14T20:33:21.108-0800    no collection specified
-2023-01-14T20:33:21.108-0800    using filename 'inventory' as collection
-2023-01-14T20:33:21.113-0800    error connecting to host: could not connect to server: connection() error occurred during connection handshake: auth error: sasl conversation error: unable to authenticate using mechanism "SCRAM-SHA-1": (AuthenticationFailed) Authentication failed.
+2023-01-14T20:33:21.108-0800 no collection specified
+2023-01-14T20:33:21.108-0800 using filename 'inventory' as collection
+2023-01-14T20:33:21.113-0800 error connecting to host: could not connect to server: connection() error occurred during connection handshake: auth error: sasl conversation error: unable to authenticate using mechanism "SCRAM-SHA-1": (AuthenticationFailed) Authentication failed.
+
+```
+
+```
+
 ```
