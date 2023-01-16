@@ -120,7 +120,7 @@ set up keyfile with:
 
 ```
 
-openssl rand -base64 755 > keyfile
+openssl rand -base64 755 > keyFile
 
 ```
 
@@ -129,7 +129,7 @@ for production environments, use x.509 certificate instead
 current user only has read permissions:
 
 ```
-chmod 400 keyfile
+chmod 400 keyFile
 ```
 
 shell parameter expansion:
@@ -196,7 +196,7 @@ start 3 individual mongod processes:
 `mongod -f m2.conf`
 `mongod -f m3.conf`
 
-N.B., I had to add `--repliSet=mongodb-essentials-rs
+N.B., I had to add `--replSet=mongodb-essentials-rs
 
 ### initiate replica set and add instances
 
@@ -570,7 +570,9 @@ db.inventory.findOne({ $nor: [{price: {$gt: 8000}}, {"variations.variation": "Bl
 ```
 db.inventory.findOne({ "price": {$not: { $gt: 2000} } })
 ```
-_if you search a field that doesn't exist, it'll still work! Watch out!
+
+\_if you search a field that doesn't exist, it'll still work! Watch out!
+
 ```
 db.inventory.findOne({ "variations.price": {$not: { $gt: 2000} } })
 ```
@@ -653,6 +655,14 @@ https://rajanmaharjan.medium.com/uninstall-mongodb-macos-completely-d2a6d6c163f9
 
 I think I was getting an error when uninstalling/reinstalling because I didn't remove all the files, e.g. the log file in `/tmp` and `/usr/local/etc`
 
+## reinstall mongodb
+
+https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-os-x/
+
+-   when I check `brew services`, the `User` is `root`.
+-   when I try to find the file listed in brew services list, `~/Library/LaunchAgents/homebrew.mxcl.mongodb-community.plist`, it's not shown.
+    -   according to this, the `plist` file should be owned by user, not root: https://www.mongodb.com/community/forums/t/unable-to-start-mongo-instance-on-mac-os-monterrey-12-6-using-homebrew/186682/11
+
 ## `Unrecognized option:`
 
 _I needed to do camel case for_ `replSetName`
@@ -697,6 +707,22 @@ Enter password for mongo user:
 
 ```
 
-```
+## MongoDB starting as root, permission problems
+
+file ownership
+https://www.mongodb.com/community/forums/t/unable-to-start-mongo-instance-on-mac-os-monterrey-12-6-using-homebrew/186682/10
+
+-   the `plist` file should be owned by the user, not `root`
+-   check ownership of files `ls -alh /usr/local/var/mongodb/*`
+    -   `sudo chown ds /usr/local/var/mongodb/WiredTiger.turtle`
+    -   `sudo chown ds /usr/local/var/mongodb/journal/WiredTiger*`
 
 ```
+➜  ~/codingBootcamp/mongodbEssentials git:(main) brew services list
+Name              Status       User          File
+mongodb-community error  12288 root          ~/Library/LaunchAgents/homebrew.mxcl.mongodb-community.plist
+mysql             started      andrewleonard ~/Library/LaunchAgents/homebrew.mxcl.mysql.plist
+```
+
+May need to change permissions?
+https://github.com/Homebrew/legacy-homebrew/issues/19670
